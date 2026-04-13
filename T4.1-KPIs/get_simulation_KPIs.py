@@ -12,50 +12,68 @@ get_NOx = True
 get_fuel_consumption = True
 get_noise_emission = True
 
-KPI_list = []
+kpi_list = []
 if get_CO2:
-    KPI_list.append('CO2')
+    kpi_list.append('CO2')
 if get_CO:
-    KPI_list.append('CO')
+    kpi_list.append('CO')
 if get_PMx:
-    KPI_list.append('PMx')
+    kpi_list.append('PMx')
 if get_NOx:
-    KPI_list.append('NOx')
+    kpi_list.append('NOx')
 if get_fuel_consumption:
-    KPI_list.append('fuel_consumption')
+    kpi_list.append('fuel_consumption')
 if get_noise_emission:
-    KPI_list.append('noise_emission')
+    kpi_list.append('noise_emission')
 
 
 aggregate_step = 60
-duration = 7200
+duration = 180
 sumo_binary = "sumo"
 conf_file = "LuSTScenario-master/scenario/due.static.sumocfg"
 sumo_cmd = [sumo_binary, "-c", conf_file]
 net = sumolib.net.readNet('LuSTScenario-master/scenario/lust.net.xml')
+plot_path = "plots"
 
 
 traci.start(sumo_cmd)
 step = 0
-emission_dict = {}
+emission_dict = {kpi: {} for kpi in kpi_list}
 edge_ids = [edge.getID() for edge in net.getEdges()]
-edge_emission = {eid: 0 for eid in edge_ids}
+edge_emission = {kpi: {eid: 0.0 for eid in edge_ids} for kpi in kpi_list}
 
-while traci.simulation.getMinExpectedNumber() > 0 and step < duration:
+while step < duration:
     traci.simulationStep()
     step += 1
 
     for eid in edge_ids:
-        edge_emission[eid] += traci.edge.getCO2Emission(eid)
+        for kpi in kpi_list:
+            if kpi == "CO2":
+                func_name = "getCO2Emission"
+            elif kpi == "CO":
+                func_name = "getCOEmission"
+            elif kpi == "PMx":
+                func_name = "getPMxEmission"
+            elif kpi == "NOx":
+                func_name = "getNOxEmission"
+            elif kpi == "fuel_consumption":
+                func_name = "getFuelConsumption"
+            elif kpi == "noise_emission":
+                func_name = "getNoiseEmission"
+            else:
+                continue
+            val = getattr(traci.edge, func_name)(eid)
+            edge_emission[kpi][eid] += val
 
     if step % aggregate_step == 0:
-        veh_num = traci.vehicle.getIDCount()
-        print(f"Step {step}: {veh_num} vehicles on the road.")
-        for eid in edge_ids:
-            emission_dict[step] = edge_emission.copy()
-        edge_emission = {eid: 0 for eid in edge_ids}
+        print(f"Step {step}: {traci.vehicle.getIDCount()} vehicles.")
+
+        for kpi in kpi_list:
+            emission_dict[kpi][step] = edge_emission[kpi].copy()
+            edge_emission[kpi] = {eid: 0.0 for eid in edge_ids}
 
 traci.close()
 
-plot_gif(net, emission_dict, name="CO2_emission.gif")
+for kpi in kpi_list:
+    plot_gif(net, emission_dict[kpi], name=f"{kpi}_emission.gif", plot_path=plot_path)
 

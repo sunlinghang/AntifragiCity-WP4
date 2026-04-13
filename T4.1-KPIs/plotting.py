@@ -8,7 +8,7 @@ import matplotlib.colors as colors
 cmap = cm.get_cmap('viridis')
 
 
-def plot_frame(step, net, edge_emission, norm, sm):
+def plot_frame(step, net, edge_emission, norm, sm, plot_path):
     fig, ax = plt.subplots(figsize=(10, 8))  # Increased width for legend
     for edge in net.getEdges():
         edge_id = edge.getID()
@@ -27,13 +27,13 @@ def plot_frame(step, net, edge_emission, norm, sm):
     cbar = fig.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
     cbar.set_label('CO2 Emission (mg/min)', rotation=270, labelpad=15)
     plt.tight_layout()
-    fname = f"_frame_{step}.png"
+    fname = f"{plot_path}/_frame_{step}.png"
     plt.savefig(fname, dpi=300)
     plt.close(fig)
     return fname
 
 
-def plot_gif(net, emission_dict, name):
+def plot_gif(net, emission_dict, name, plot_path):
     frames = []
     fname_list = []
 
@@ -46,11 +46,11 @@ def plot_gif(net, emission_dict, name):
     sm.set_array([])
 
     for step, edge_emission in emission_dict.items():
-        fname = plot_frame(step, net, edge_emission, norm, sm)
+        fname = plot_frame(step, net, edge_emission, norm, sm, plot_path)
         fname_list.append(fname)
         frames.append(imageio.imread(fname))
 
-    imageio.mimsave(f"{name}", frames, duration=0.5)
+    imageio.mimsave(f"{plot_path}/{name}", frames, duration=0.5)
     [os.remove(_) for _ in fname_list]
     print(f"Saved {name}!")
 
