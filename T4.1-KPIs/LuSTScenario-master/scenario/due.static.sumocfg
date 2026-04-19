@@ -17,6 +17,7 @@ Author: Lara CODECA [codeca@gmail.com]
     <output>
         <summary-output value="due.static.summary.xml"/>
         <tripinfo-output value="due.static.tripinfo.xml"/>
+        <edgedata-output value="due.static.edgedata.xml"/>
     </output>
 
     <time>

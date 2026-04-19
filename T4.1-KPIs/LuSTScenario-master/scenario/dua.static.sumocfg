@@ -17,10 +17,12 @@ Author: Lara CODECA [codeca@gmail.com]
     <output>
         <summary-output value="dua.static.summary.xml"/>
         <tripinfo-output value="dua.static.tripinfo.xml"/>
+        <edgedata-output value="dua.static.edgedata.xml"/>
     </output>
 
     <time>
         <begin value="0"/>
+        <end value="86400"/>
         <step-length value="1"/>
     </time>
 

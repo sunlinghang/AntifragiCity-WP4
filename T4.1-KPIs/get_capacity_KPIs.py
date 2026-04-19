@@ -3,9 +3,10 @@ import sys
 import xml.etree.ElementTree as ET
 import networkx as nx
 import sumolib
+import scipy as sp
 
 NET_FILE = "LuSTScenario-master/scenario/lust.net.xml"
-EDGEDATA_FILE = "LuSTScenario-master/scenario/lust.edgedata.xml"
+EDGEDATA_FILE = "LuSTScenario-master/scenario/dua.static.edgedata.xml"
 TOP_N = 10
 
 def build_graph(net_file):
@@ -44,7 +45,7 @@ def compute_degree(G):
 def eigenvector_centrality(G):
     scc_nodes = max(nx.strongly_connected_components(G), key=len)
     subgraph = G.subgraph(scc_nodes)
-    ev = nx.eigenvector_centrality(subgraph, weight="weight")
+    ev = nx.eigenvector_centrality_numpy(subgraph, weight="weight")
     return {node: ev.get(node, 0) for node in G.nodes()}
 
 def compute_commuter_flow(G, edge_flows, net_file):
