@@ -34,3 +34,12 @@ LuST Scenario can be lunched directly with four configuration files.
   * `sumo -c due.actuated.sumocfg` with actuated traffic lights.
 
 *A special thanks to Matěj Kubička [matej@matejk.cz] for his contribution to the network topology.*
+
+### Additional information
+To run certain KPIs, for example Commuter Flow we must first run the chosen sumoconfig file and retrieve edgedata file. This particular KPI would then use this output file in calculations. 
+
+To retrieve this file, you should add this lane inside of your sumoconfig file under "output" section:
+
+`<edgedata-output value="edgedata.out.xml"/>`
+
+After running the SUMO simulation, the edgedata output file will appear in your directory. Then, you can run get_capacity_KPIs.py. 

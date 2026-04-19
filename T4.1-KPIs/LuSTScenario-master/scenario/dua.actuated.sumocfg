@@ -17,6 +17,7 @@ Author: Lara CODECA [codeca@gmail.com]
     <output>
         <summary-output value="dua.actuated.summary.xml"/>
         <tripinfo-output value="dua.actuated.tripinfo.xml"/>
+        <edgedata-output value="dua.actuated.edgedata.xml"/>
     </output>
 
     <time>
