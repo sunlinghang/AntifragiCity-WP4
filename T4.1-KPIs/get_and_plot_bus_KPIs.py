@@ -5,7 +5,7 @@ import matplotlib.patches as mpatches
 import sumolib
 from get_infrastructure_KPIs import estimate_area_km2, kpi_total_road_length, load_edges
 
-NET_FILE   = "VMOD.net.xml"
+NET_FILE   = "LuSTScenario-master/scenario/lust.net.xml"
 OUTPUT_DIR = "plots"
 
 
@@ -76,7 +76,7 @@ def plot_bus_routes(net, bus_edges, exclusive_bus_edges, filename):
         mpatches.Patch(color="blue",      label="Shared bus routes"),
         mpatches.Patch(color="red",       label="Exclusive bus routes"),
     ]
-    ax.legend(handles=legend_patches, loc="lower left", fontsize=12, framealpha=0.9)
+    ax.legend(handles=legend_patches, loc="lower left", fontsize=14, framealpha=0.9)
 
     ax.set_aspect("equal")
     ax.axis("off")
