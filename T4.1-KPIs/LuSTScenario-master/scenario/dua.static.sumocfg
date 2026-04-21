@@ -22,7 +22,7 @@ Author: Lara CODECA [codeca@gmail.com]
 
     <time>
         <begin value="0"/>
-        <end value="86400"/>
+        <end value="21600"/>
         <step-length value="1"/>
     </time>
 
