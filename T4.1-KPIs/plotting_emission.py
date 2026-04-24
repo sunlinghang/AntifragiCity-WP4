@@ -25,14 +25,14 @@ def plot_frame(step, net, kpi, edge_emission, norm, sm, plot_path):
     if kpi == 'fuel':
         plt.title(f"{kpi} consumption | Simulation second: {step}", fontsize=14)
     else:
-        plt.title(f"{kpi} emission | Simulation second: {step}", fontsize=14)
+        plt.title(f"{kpi} emissions | Simulation second: {step}", fontsize=14)
     cbar = fig.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
     if kpi == 'noise':
-        cbar.set_label(f"{kpi} emission [dB]", rotation=270, labelpad=15)
+        cbar.set_label(f"{kpi} emissions [dB]", rotation=270, labelpad=15)
     if kpi == 'fuel':
         cbar.set_label(f"{kpi} consumption [mg]", rotation=270, labelpad=15)
     else:
-        cbar.set_label(f"{kpi} emission [mg]", rotation=270, labelpad=15)
+        cbar.set_label(f"{kpi} emissions [mg]", rotation=270, labelpad=15)
     plt.tight_layout()
     fname = f"{plot_path}/{kpi}_frame_{step}.png"
     plt.savefig(fname, dpi=300)
@@ -43,7 +43,7 @@ def plot_frame(step, net, kpi, edge_emission, norm, sm, plot_path):
 def plot_gif(net, kpi, path_output, path_plot):
     frames = []
     fname_list = []
-    name = f"{kpi}_emission.gif"
+    name = f"{kpi}_emissions.gif"
     if kpi == 'fuel':
         name = f"{kpi}_consumption.gif"
 
