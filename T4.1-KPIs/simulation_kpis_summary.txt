@@ -1,0 +1,25 @@
+======================================================================
+SUMO SIMULATION KPIs SUMMARY
+======================================================================
+
+total_vkt_km: 2392656.4184
+total_travel_time_sec: 255117717.0000
+total_travel_time_hours: 70866.0325
+avg_trip_duration_sec: 897.4044
+avg_trip_duration_min: 14.9567
+avg_trip_duration_per_km: 106.6253
+avg_bus_speed_kmh: 17.2496
+total_bus_distance_km: 17541.9218
+num_buses: 2199
+total_delays_sec: 124078231.0800
+total_delays_hours: 34466.1753
+avg_delay_per_vehicle_sec: 436.4587
+avg_delay_per_vehicle_min: 7.2743
+avg_waiting_time_sec: 323.9514
+avg_waiting_time_min: 5.3992
+total_waiting_time_sec: 92094207.0000
+total_waiting_time_hours: 25581.7242
+num_vehicles: 284284
+avg_distance_per_vehicle_km: 8.4164
+
+======================================================================
