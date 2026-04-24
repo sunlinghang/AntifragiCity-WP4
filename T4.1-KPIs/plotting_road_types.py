@@ -34,8 +34,8 @@ def plot_map(net, edges, type_colors, filename):
     ax.legend(
         handles=legend_patches,
         loc="lower left",
-        fontsize=6,
-        framealpha=0.7,
+        fontsize=10,
+        framealpha=0.9,
         ncol=2,
     )
 

@@ -21,8 +21,7 @@ Author: Lara CODECA [codeca@gmail.com]
     </output>
 
     <time>
-        <begin value="25200"/>
-        <end value="28800"/>
+        <begin value="0"/>
         <step-length value="1"/>
     </time>
 

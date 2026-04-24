@@ -22,7 +22,7 @@ Author: Lara CODECA [codeca@gmail.com]
 
     <time>
         <begin value="0"/>
-        <end value="86400"/>
+        <end value="21600"/> # changed to 1/4 of running time for testing purposes 
         <step-length value="1"/>
     </time>
 

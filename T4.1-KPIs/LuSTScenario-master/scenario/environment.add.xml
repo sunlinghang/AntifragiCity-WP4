@@ -1,0 +1,16 @@
+
+    <additional>
+        <edgeData 
+            id="edge_emissions" 
+            type="emissions" 
+            period="600" 
+            file="emissions.xml" 
+            excludeEmpty="true"/>
+
+        <edgeData 
+            id="edge_noise" 
+            type="harmonoise" 
+            period="600" 
+            file="noise.xml" 
+            excludeEmpty="true"/>
+    </additional>
