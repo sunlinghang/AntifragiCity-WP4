@@ -28,13 +28,13 @@ def plot_map(net, edges, type_colors, filename):
         ax.plot(x, y, color=color, linewidth=1.2)
 
     legend_patches = [
-        mpatches.Patch(color=color, label=t)
+        mpatches.Patch(color=color, label=t.replace("highway.", ""))
         for t, color in sorted(type_colors.items())
     ]
     ax.legend(
         handles=legend_patches,
         loc="lower left",
-        fontsize=10,
+        fontsize=12,
         framealpha=0.9,
         ncol=2,
     )
@@ -59,8 +59,9 @@ def plot_bar(edges, type_colors, filename):
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(range(len(labels)), values, color=colors)
 
+    clean_labels = [t.replace("highway.", "") for t in labels]
     ax.set_xticks(range(len(labels)))
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
+    ax.set_xticklabels(clean_labels, rotation=45, ha="right", fontsize=14)
     ax.set_ylabel("Length (km)")
     ax.set_title("Road Length by Type")
 
