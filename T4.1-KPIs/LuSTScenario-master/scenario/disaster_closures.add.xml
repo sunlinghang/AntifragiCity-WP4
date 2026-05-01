@@ -1,0 +1,12 @@
+<additional>
+    <rerouter id="disaster_rerouter" edges="--30256#1 --30528#8 --30724#0 --31504#0 --32924#5 -30528#6 -30892 -30962#2 -31068#1 -31070#9 -31380#2 -31780 -31812 -31834#2 -31952#18 -32278#6 -32924#4" probability="1">
+        <interval begin="0" end="21600">
+            <closingReroute id="-30620" disallow="all"/>
+            <closingReroute id="--30620" disallow="all"/>
+            <closingReroute id="-30528#7" disallow="all"/>
+            <closingReroute id="--30528#7" disallow="all"/>
+            <closingReroute id="--30256#0" disallow="all"/>
+            <closingReroute id="-30256#0" disallow="all"/>
+        </interval>
+    </rerouter>
+</additional>
