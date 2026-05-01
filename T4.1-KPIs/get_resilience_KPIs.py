@@ -15,7 +15,7 @@ from get_capacity_KPIs import build_graph, NET_FILE
 
 
 TRIPINFO_FILE  = "LuSTScenario-master/scenario/dua.static.tripinfo.xml"
-DISASTER_EDGES = ["--30282", "--30306#1", "--30316", "--30422", "--30506"] # picked random edges from the network to show functionality
+DISASTER_EDGES = ["-30620", "--30620", "-30528#7", "--30528#7", "--30256#0", "--30256#0"] # manually picked highly critical edges
 OUTPUT_DIR     = "plots"
 CMAP           = cm.get_cmap("viridis")
 

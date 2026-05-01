@@ -58,12 +58,14 @@ def plot_bar(edges, type_colors, filename):
 
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(range(len(labels)), values, color=colors)
+    for bar, value in zip(bars,values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                f"{value:.1f}", ha="center", va="bottom", fontsize=10)
 
     clean_labels = [t.replace("highway.", "") for t in labels]
     ax.set_xticks(range(len(labels)))
     ax.set_xticklabels(clean_labels, rotation=45, ha="right", fontsize=14)
     ax.set_ylabel("Length (km)")
-    ax.set_title("Road Length by Type")
 
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
