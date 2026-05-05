@@ -1,5 +1,8 @@
 import os
 import math
+import time
+import random
+import logging
 import statistics
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -12,8 +15,13 @@ import sumolib
 
 from get_capacity_KPIs import build_graph, NET_FILE
 
-BASELINE_TRIPINFO = "outputs/baseline.tripinfo.xml"
-DISASTER_TRIPINFO = "outputs/disaster.tripinfo.xml"
+
+# ---------------------------------------------------------------------
+# Inputs
+# ---------------------------------------------------------------------
+
+BASELINE_TRIPINFO = "LuSTScenario-master/scenario/outputs/baseline.tripinfo.xml"
+DISASTER_TRIPINFO = "LuSTScenario-master/scenario/outputs/disaster.tripinfo.xml"
 
 DISASTER_EDGES = [
     "-30620",
@@ -24,6 +32,55 @@ DISASTER_EDGES = [
 ]
 
 OUTPUT_DIR = "plots"
+
+GRAPH_SAMPLE_SIZE = 2000
+RANDOM_SEED = 42
+
+
+# ---------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
+
+
+def timer_start(message: str):
+    logger.info(message)
+    return time.time()
+
+
+def timer_end(start_time: float, message: str):
+    elapsed = time.time() - start_time
+    logger.info(f"{message} finished in {elapsed:.2f} seconds")
+
+
+def progress_bar(current: int, total: int, width: int = 40):
+    if total <= 0:
+        return
+
+    ratio = current / total
+    filled = int(width * ratio)
+    bar = "#" * filled + "-" * (width - filled)
+
+    print(
+        f"\r[{bar}] {current}/{total} ({100 * ratio:.1f}%)",
+        end="",
+        flush=True,
+    )
+
+    if current == total:
+        print()
+
+
+# ---------------------------------------------------------------------
+# Tripinfo parsing
+# ---------------------------------------------------------------------
 
 @dataclass
 class TripRecord:
@@ -36,8 +93,6 @@ class TripRecord:
     time_loss: Optional[float]
     depart_delay: Optional[float]
     reroute_no: Optional[int]
-    depart_lane: Optional[str]
-    arrival_lane: Optional[str]
     vaporized: bool
 
 
@@ -63,14 +118,17 @@ def parse_tripinfo(tripinfo_file: str) -> Dict[str, TripRecord]:
     if not os.path.exists(tripinfo_file):
         raise FileNotFoundError(f"Tripinfo file not found: {tripinfo_file}")
 
-    tree = ET.parse(tripinfo_file)
-    root = tree.getroot()
+    start = timer_start(f"Reading tripinfo file: {tripinfo_file}")
 
     trips: Dict[str, TripRecord] = {}
 
-    for elem in root.findall("tripinfo"):
+    for event, elem in ET.iterparse(tripinfo_file, events=("end",)):
+        if elem.tag != "tripinfo":
+            continue
+
         vehicle_id = elem.get("id")
         if vehicle_id is None:
+            elem.clear()
             continue
 
         trips[vehicle_id] = TripRecord(
@@ -83,13 +141,21 @@ def parse_tripinfo(tripinfo_file: str) -> Dict[str, TripRecord]:
             time_loss=as_float(elem.get("timeLoss")),
             depart_delay=as_float(elem.get("departDelay")),
             reroute_no=as_int(elem.get("rerouteNo")),
-            depart_lane=elem.get("departLane"),
-            arrival_lane=elem.get("arrivalLane"),
             vaporized=elem.get("vaporized", "false").lower() == "true",
         )
 
+        elem.clear()
+
+        if len(trips) % 100000 == 0:
+            logger.info(f"Parsed {len(trips):,} tripinfo records from {tripinfo_file}")
+
+    timer_end(start, f"Loaded {len(trips):,} records from {tripinfo_file}")
     return trips
 
+
+# ---------------------------------------------------------------------
+# KPI helpers
+# ---------------------------------------------------------------------
 
 def completed_vehicle_ids(trips: Dict[str, TripRecord]) -> set:
     return {
@@ -120,14 +186,14 @@ def get_values(
     vehicle_ids: set,
     attribute: str,
 ) -> List[float]:
-    values = []
+    output = []
 
     for vehicle_id in vehicle_ids:
         value = getattr(trips[vehicle_id], attribute)
         if value is not None:
-            values.append(float(value))
+            output.append(float(value))
 
-    return values
+    return output
 
 
 def mean_or_none(values: List[float]) -> Optional[float]:
@@ -201,6 +267,8 @@ def compare_baseline_and_disaster(
     baseline_trips: Dict[str, TripRecord],
     disaster_trips: Dict[str, TripRecord],
 ) -> dict:
+    start = timer_start("Comparing baseline and disaster tripinfos")
+
     baseline_completed = completed_vehicle_ids(baseline_trips)
     disaster_completed = completed_vehicle_ids(disaster_trips)
 
@@ -214,7 +282,12 @@ def compare_baseline_and_disaster(
     time_loss_deltas = []
     route_length_deltas = []
 
-    for vehicle_id in completed_in_both:
+    completed_list = list(completed_in_both)
+    total = len(completed_list)
+
+    logger.info(f"Computing deltas for {total:,} vehicles completed in both runs")
+
+    for i, vehicle_id in enumerate(completed_list, start=1):
         b = baseline_trips[vehicle_id]
         d = disaster_trips[vehicle_id]
 
@@ -230,6 +303,9 @@ def compare_baseline_and_disaster(
         if b.route_length is not None and d.route_length is not None:
             route_length_deltas.append(d.route_length - b.route_length)
 
+        if i % 10000 == 0 or i == total:
+            progress_bar(i, total)
+
     baseline_summary = summarize_run(baseline_trips)
     disaster_summary = summarize_run(disaster_trips)
 
@@ -238,7 +314,7 @@ def compare_baseline_and_disaster(
         if baseline_completed else 0.0
     )
 
-    return {
+    result = {
         "baseline": baseline_summary,
         "disaster": disaster_summary,
 
@@ -275,39 +351,73 @@ def compare_baseline_and_disaster(
         ),
     }
 
+    timer_end(start, "Tripinfo comparison")
+    return result
+
+
+# ---------------------------------------------------------------------
+# Graph calculations
+# ---------------------------------------------------------------------
+
 def create_damaged_graph(G: nx.Graph, disaster_edges: List[str]) -> nx.Graph:
+    start = timer_start("Creating damaged graph")
+
     G_damaged = G.copy()
     disaster_set = set(disaster_edges)
+
+    removed = 0
 
     for u, v, data in list(G_damaged.edges(data=True)):
         if data.get("edge_id") in disaster_set:
             G_damaged.remove_edge(u, v)
+            removed += 1
+
+    logger.info(f"Removed {removed} graph edges for disaster scenario")
+    timer_end(start, "Damaged graph creation")
 
     return G_damaged
 
 
-def graph_connectivity_fraction(G: nx.Graph, disaster_edges: List[str]) -> float:
-    G_damaged = create_damaged_graph(G, disaster_edges)
+def sampled_graph_connectivity_fraction(
+    G: nx.Graph,
+    disaster_edges: List[str],
+    sample_size: int = 2000,
+    seed: int = 42,
+) -> float:
+    start = timer_start(f"Computing sampled graph connectivity with {sample_size:,} OD pairs")
 
+    random.seed(seed)
+
+    G_damaged = create_damaged_graph(G, disaster_edges)
     nodes = list(G_damaged.nodes())
 
     if len(nodes) < 2:
         return 1.0
 
-    total_pairs = 0
-    reachable_pairs = 0
+    reachable = 0
+    valid = 0
 
-    for origin in nodes:
-        for destination in nodes:
-            if origin == destination:
-                continue
+    for i in range(1, sample_size + 1):
+        origin = random.choice(nodes)
+        destination = random.choice(nodes)
 
-            total_pairs += 1
+        if origin == destination:
+            continue
 
-            if nx.has_path(G_damaged, origin, destination):
-                reachable_pairs += 1
+        valid += 1
 
-    return reachable_pairs / total_pairs if total_pairs > 0 else 1.0
+        if nx.has_path(G_damaged, origin, destination):
+            reachable += 1
+
+        if i % 100 == 0 or i == sample_size:
+            progress_bar(i, sample_size)
+
+    fraction = reachable / valid if valid > 0 else 1.0
+
+    logger.info(f"Sampled graph connectivity fraction: {100 * fraction:.2f}%")
+    timer_end(start, "Sampled graph connectivity")
+
+    return fraction
 
 
 def check_disaster_edges_exist(G: nx.Graph, disaster_edges: List[str]) -> None:
@@ -332,7 +442,13 @@ def check_disaster_edges_exist(G: nx.Graph, disaster_edges: List[str]) -> None:
             print(f"  - {edge_id}")
 
 
+# ---------------------------------------------------------------------
+# Plotting
+# ---------------------------------------------------------------------
+
 def plot_post_disaster_network(net, disaster_edges: List[str], filename: str) -> None:
+    start = timer_start("Plotting post-disaster road closures")
+
     disaster_set = set(disaster_edges)
 
     fig, ax = plt.subplots(figsize=(12, 10))
@@ -363,10 +479,12 @@ def plot_post_disaster_network(net, disaster_edges: List[str], filename: str) ->
     plt.savefig(filename, dpi=300)
     plt.close(fig)
 
-    print(f"Saved {filename}")
+    timer_end(start, f"Saved {filename}")
 
 
 def plot_metric_comparison(comparison: dict, filename: str) -> None:
+    start = timer_start("Plotting baseline vs post-disaster metrics")
+
     metrics = [
         ("mean_duration", "Mean duration [s]"),
         ("mean_waiting_time", "Mean waiting time [s]"),
@@ -389,7 +507,7 @@ def plot_metric_comparison(comparison: dict, filename: str) -> None:
             disaster_values.append(disaster_value)
 
     if not labels:
-        print("No comparable metrics available for plotting.")
+        logger.warning("No comparable metrics available for plotting.")
         return
 
     x = range(len(labels))
@@ -409,7 +527,12 @@ def plot_metric_comparison(comparison: dict, filename: str) -> None:
     plt.savefig(filename, dpi=300)
     plt.close(fig)
 
-    print(f"Saved {filename}")
+    timer_end(start, f"Saved {filename}")
+
+
+# ---------------------------------------------------------------------
+# Reporting
+# ---------------------------------------------------------------------
 
 def fmt(value: Optional[float], digits: int = 2) -> str:
     if value is None:
@@ -424,61 +547,72 @@ def pct(value: Optional[float]) -> str:
 
 
 def print_post_disaster_report(comparison: dict, graph_fraction: float) -> None:
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("POST-DISASTER KPI REPORT")
-    print("=" * 60)
+    print("=" * 70)
 
     print("\nDemand served")
-    print("-" * 60)
-    print(f"Baseline completed vehicles     : {comparison['baseline_completed']}")
-    print(f"Post-disaster completed vehicles: {comparison['disaster_completed']}")
-    print(f"Completed in both runs          : {comparison['completed_in_both']}")
-    print(f"Demand served                   : {pct(comparison['demand_served'])}")
+    print("-" * 70)
+    print(f"Baseline completed vehicles      : {comparison['baseline_completed']:,}")
+    print(f"Post-disaster completed vehicles : {comparison['disaster_completed']:,}")
+    print(f"Completed in both runs           : {comparison['completed_in_both']:,}")
+    print(f"Demand served                    : {pct(comparison['demand_served'])}")
 
     print("\nTripinfo record comparison")
-    print("-" * 60)
-    print(f"Baseline tripinfo records       : {comparison['baseline_vehicle_ids']}")
-    print(f"Post-disaster tripinfo records  : {comparison['disaster_vehicle_ids']}")
-    print(f"Common vehicle IDs              : {comparison['common_vehicle_ids']}")
-    print(f"Missing from disaster tripinfo  : {comparison['missing_from_disaster_tripinfo']}")
+    print("-" * 70)
+    print(f"Baseline tripinfo records        : {comparison['baseline_vehicle_ids']:,}")
+    print(f"Post-disaster tripinfo records   : {comparison['disaster_vehicle_ids']:,}")
+    print(f"Common vehicle IDs               : {comparison['common_vehicle_ids']:,}")
+    print(f"Missing from disaster tripinfo   : {comparison['missing_from_disaster_tripinfo']:,}")
 
     print("\nPerformance degradation")
-    print("-" * 60)
-    print(f"Baseline mean duration          : {fmt(comparison['baseline']['mean_duration'])} s")
-    print(f"Disaster mean duration          : {fmt(comparison['disaster']['mean_duration'])} s")
-    print(f"Duration ratio                  : {fmt(comparison['duration_ratio'], 3)}x")
-    print(f"Mean duration delta             : {fmt(comparison['mean_duration_delta'])} s")
-    print(f"Median duration delta           : {fmt(comparison['median_duration_delta'])} s")
-    print(f"P95 duration delta              : {fmt(comparison['p95_duration_delta'])} s")
+    print("-" * 70)
+    print(f"Baseline mean duration           : {fmt(comparison['baseline']['mean_duration'])} s")
+    print(f"Disaster mean duration           : {fmt(comparison['disaster']['mean_duration'])} s")
+    print(f"Duration ratio                   : {fmt(comparison['duration_ratio'], 3)}x")
+    print(f"Mean duration delta              : {fmt(comparison['mean_duration_delta'])} s")
+    print(f"Median duration delta            : {fmt(comparison['median_duration_delta'])} s")
+    print(f"P95 duration delta               : {fmt(comparison['p95_duration_delta'])} s")
 
-    print(f"\nBaseline mean waiting time      : {fmt(comparison['baseline']['mean_waiting_time'])} s")
-    print(f"Disaster mean waiting time      : {fmt(comparison['disaster']['mean_waiting_time'])} s")
-    print(f"Waiting time ratio              : {fmt(comparison['waiting_time_ratio'], 3)}x")
-    print(f"Mean waiting time delta         : {fmt(comparison['mean_waiting_time_delta'])} s")
+    print(f"\nBaseline mean waiting time       : {fmt(comparison['baseline']['mean_waiting_time'])} s")
+    print(f"Disaster mean waiting time       : {fmt(comparison['disaster']['mean_waiting_time'])} s")
+    print(f"Waiting time ratio               : {fmt(comparison['waiting_time_ratio'], 3)}x")
+    print(f"Mean waiting time delta          : {fmt(comparison['mean_waiting_time_delta'])} s")
 
-    print(f"\nBaseline mean time loss         : {fmt(comparison['baseline']['mean_time_loss'])} s")
-    print(f"Disaster mean time loss         : {fmt(comparison['disaster']['mean_time_loss'])} s")
-    print(f"Time loss ratio                 : {fmt(comparison['time_loss_ratio'], 3)}x")
-    print(f"Mean time loss delta            : {fmt(comparison['mean_time_loss_delta'])} s")
+    print(f"\nBaseline mean time loss          : {fmt(comparison['baseline']['mean_time_loss'])} s")
+    print(f"Disaster mean time loss          : {fmt(comparison['disaster']['mean_time_loss'])} s")
+    print(f"Time loss ratio                  : {fmt(comparison['time_loss_ratio'], 3)}x")
+    print(f"Mean time loss delta             : {fmt(comparison['mean_time_loss_delta'])} s")
 
-    print(f"\nMean route length delta         : {fmt(comparison['mean_route_length_delta'])} m")
+    print(f"\nMean route length delta          : {fmt(comparison['mean_route_length_delta'])} m")
 
     print("\nUnfinished / vaporized vehicles")
-    print("-" * 60)
-    print(f"Baseline unfinished             : {comparison['baseline']['unfinished']}")
-    print(f"Post-disaster unfinished        : {comparison['disaster']['unfinished']}")
-    print(f"Baseline vaporized              : {comparison['baseline']['vaporized']}")
-    print(f"Post-disaster vaporized         : {comparison['disaster']['vaporized']}")
+    print("-" * 70)
+    print(f"Baseline unfinished              : {comparison['baseline']['unfinished']:,}")
+    print(f"Post-disaster unfinished         : {comparison['disaster']['unfinished']:,}")
+    print(f"Baseline vaporized               : {comparison['baseline']['vaporized']:,}")
+    print(f"Post-disaster vaporized          : {comparison['disaster']['vaporized']:,}")
 
     print("\nGraph-only post-disaster proxy")
-    print("-" * 60)
-    print(f"Reachable node-pair fraction    : {pct(graph_fraction)}")
+    print("-" * 70)
+    print(f"Sampled reachable node fraction  : {pct(graph_fraction)}")
+
+
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
 
 if __name__ == "__main__":
+    total_start = timer_start("Starting post-disaster KPI calculation")
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    start = timer_start("Loading SUMO network and NetworkX graph")
     net = sumolib.net.readNet(NET_FILE)
     G = build_graph(NET_FILE)
+    timer_end(start, "Network loading")
+
+    logger.info(f"NetworkX graph has {G.number_of_nodes():,} nodes and {G.number_of_edges():,} edges")
 
     check_disaster_edges_exist(G, DISASTER_EDGES)
 
@@ -490,9 +624,11 @@ if __name__ == "__main__":
         disaster_trips,
     )
 
-    graph_fraction = graph_connectivity_fraction(
+    graph_fraction = sampled_graph_connectivity_fraction(
         G,
         DISASTER_EDGES,
+        sample_size=GRAPH_SAMPLE_SIZE,
+        seed=RANDOM_SEED,
     )
 
     print_post_disaster_report(
@@ -510,3 +646,5 @@ if __name__ == "__main__":
         comparison,
         f"{OUTPUT_DIR}/post_disaster_metric_comparison.png",
     )
+
+    timer_end(total_start, "Entire post-disaster KPI calculation")

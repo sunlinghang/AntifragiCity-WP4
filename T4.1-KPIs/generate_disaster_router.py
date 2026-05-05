@@ -11,8 +11,8 @@ DISASTER_EDGES = [
     "-30256#0",
 ]
 
-BEGIN = 0
-END = 21600
+BEGIN = 61200
+END = 64800
 OUTPUT_FILE = "LuSTScenario-master/scenario/disaster_closures.add.xml"
 
 
