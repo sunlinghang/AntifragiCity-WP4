@@ -468,12 +468,11 @@ def plot_post_disaster_network(net, disaster_edges: List[str], filename: str) ->
             mpatches.Patch(color="red", label="Closed road segment"),
         ],
         loc="lower left",
-        fontsize=9,
+        fontsize=12,
     )
 
     ax.set_aspect("equal")
     ax.axis("off")
-    plt.title("Post-Disaster Road Closures", fontsize=14)
 
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
