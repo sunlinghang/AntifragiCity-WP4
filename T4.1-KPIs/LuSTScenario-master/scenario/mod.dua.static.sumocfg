@@ -8,9 +8,9 @@
     </input>
 
     <output>
-        <summary-output value="20260424161522/dua.static.summary.xml" />
-        <tripinfo-output value="20260424161522/dua.static.tripinfo.xml" />
-        <edgedata-output value="20260424161522/dua.static.edgedata.xml" />
+        <summary-output value="closure_2pct_8h-9h_20260430150647/dua.static.summary.xml" />
+        <tripinfo-output value="closure_2pct_8h-9h_20260430150647/dua.static.tripinfo.xml" />
+        <edgedata-output value="closure_2pct_8h-9h_20260430150647/dua.static.edgedata.xml" />
     </output>
 
     <time>
@@ -34,7 +34,7 @@
 
     <report>
         <verbose value="true" />
-        <log value="20260424161522/dua.static.log" />
+        <log value="closure_2pct_8h-9h_20260430150647/dua.static.log" />
     </report>
 
 </configuration>

@@ -3,6 +3,7 @@
 Codebase and deliverables for **WP4** of the AntifragiCity project.
 
 The current focus is **T4.1 — Antifragile model for urban mobility**, built on top of the open-source [LuST (Luxembourg SUMO Traffic) scenario](https://sumo.dlr.de/docs/networks/luxembourg.html). KPIs from AntifragiCity Task 2.7 are computed directly from SUMO simulation outputs across six domains:
+Following D2.7, in total 58 KPIs are computed across the following domains:
 
 - network and system performance
 - transport infrastructure
@@ -14,6 +15,7 @@ The current focus is **T4.1 — Antifragile model for urban mobility**, built on
 Example visualisation — CO₂ emissions on an average day in the benchmark:
 
 ![CO2 emissions](T4.1-KPIs/plots/gif/CO2_emissions.gif)
+![Alt Text](T4.1-KPIs/plots/gif/noise_emissions.gif)
 
 ---
 

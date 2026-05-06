@@ -29,6 +29,22 @@ def summary_to_df(xml_file):
     return df
 
 
+def plot_closure(net, edges_to_close, pct):
+    plt.figure(figsize=(6, 6))
+    for edge in net.getEdges():
+        x, y = zip(*edge.getShape())
+        if edge.getID() in edges_to_close:
+            plt.plot(x, y, color='red', alpha=0.7, linewidth=2)
+        else:
+            plt.plot(x, y, color='gray', alpha=0.5, linewidth=0.5)
+    plt.title(f"Closed Edges (red) - Total: {len(edges_to_close)}")
+    plt.axis('equal')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(f'closed_edges_plot_{pct}.png', format='png', dpi=300)
+    plt.show()
+
+
 path_baseline = "LuSTScenario-master/scenario/baseline/dua.static.summary.xml"
 path_close_1pct = "LuSTScenario-master/scenario/closure_1pct_8h-9h_20260423143905/dua.static.summary.xml"
 path_close_2pct = "LuSTScenario-master/scenario/closure_2pct_8h-9h_20260423135004/dua.static.summary.xml"
@@ -59,12 +75,12 @@ for bar in bars:
     plt.text(bar.get_x() + bar.get_width()/2, yval, f"{yval:.2e}",
              va='bottom', ha='center', fontsize=10)
 plt.xticks([0.2, 1, 1.8], ['Baseline', 'Closure 1%', 'Closure 2%'])
-plt.ylabel('Total Travel Time [s]')
+plt.ylabel('Total time spent [s]')
 plt.ylim([-0.5, 2.5])
 plt.ylim([0, 5e8])
 plt.grid(c='gray', linewidth=0.2, axis='y')
 plt.tight_layout()
-plt.savefig('total_travel_time_comparison.pdf', format='pdf')
+plt.savefig('plots/total_travel_time_comparison.png', format='png', dpi=300)
 plt.show()
 plt.close()
 
@@ -81,14 +97,14 @@ plt.axvspan(8, 9, color='darkred', alpha=0.2, label='Closure Period')
 plt.axvline(x=16, color='darkred', linestyle='--')
 plt.axvline(x=21, color='darkred', linestyle='--')
 plt.xlabel('Time [hours]')
-plt.ylabel('Mean Speed [m/s]')
+plt.ylabel('Average speed [m/s]')
 plt.xticks(range(8, 25, 2))
 plt.xlim([7, 24])
 plt.ylim([0, 14])
 plt.legend()
 plt.grid(c='gray', linewidth=0.2)
 plt.tight_layout()
-plt.savefig('mean_speed_comparison_hours.pdf', format='pdf')
+plt.savefig('plots/mean_speed_comparison_hours.png', format='png', dpi=300)
 plt.show()
 
 
@@ -110,6 +126,5 @@ plt.xlim([7, 24])
 plt.legend()
 plt.grid(c='gray', linewidth=0.2)
 plt.tight_layout()
-plt.savefig('num_veh_hours.pdf', format='pdf')
+plt.savefig('plots/num_veh_hours.png', format='png', dpi=300)
 plt.show()
-

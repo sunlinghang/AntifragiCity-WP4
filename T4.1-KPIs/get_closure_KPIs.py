@@ -4,12 +4,14 @@ import random
 import sumolib
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from plotting_closure import plot_closure
+
 
 SEED = 42
 random.seed(SEED)
 
 closed_status = False
-closure_pct = 0.01
+closure_pct = 0.02
 close_start = 28800
 close_period = 3600
 close_end = close_start + close_period  # 1 hour closure starting at 7 AM
@@ -68,6 +70,7 @@ all_edges = [e.getID() for e in net.getEdges() if e.getFunction() == '']
 num_to_close = int(len(all_edges) * closure_pct)
 edges_to_close = random.sample(all_edges, num_to_close)
 print(f"Seed {SEED}: Selected {len(edges_to_close)} edges for closure.")
+plot_closure(net, edges_to_close, closure_pct)
 
 
 traci.start([
