@@ -1,3 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# SUMO outputs (large, regenerated per run)
 T4.1-KPIs/LuSTScenario-master/scenario/outputs/disaster.tripinfo.xml
 T4.1-KPIs/LuSTScenario-master/scenario/outputs/disaster.summary.xml
 T4.1-KPIs/LuSTScenario-master/scenario/outputs/baseline.tripinfo.xml
+T4.1-KPIs/LuSTScenario-master/scenario/outputs/baseline.summary.xml
+T4.1-KPIs/LuSTScenario-master/scenario/outputs/*.edgedata.xml
+T4.1-KPIs/output/
+T4.1-KPIs/output_dua/
