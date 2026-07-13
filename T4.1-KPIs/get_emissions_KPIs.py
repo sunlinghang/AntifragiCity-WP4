@@ -127,46 +127,42 @@ new_additional = f"""
 with open(file_add, "w") as f:
     f.write(new_additional)
 
+# Parse the original file ONCE
 tree = ET.parse(file_sumocfg)
 root = tree.getroot()
+
+# 1. Update additional files
 additional = root.find(".//additional-files")
-
 if additional is not None:
-    value = additional.get("value")
-    new_value = f"{value},environment.add.xml"
+    value = additional.get("value", "")
+    new_value = f"{value},environment.add.xml" if value else "environment.add.xml"
     additional.set("value", new_value)
-    tree.write(file_new_cfg, encoding="UTF-8", xml_declaration=True)
-    print(f"Successfully created {file_new_cfg} with updated files: {new_value}")
 else:
-    print("Error: Could not find <additional-files> in the config.")
+    # If the tag doesn't exist, create it inside <input>
+    input_tag = root.find(".//input")
+    if input_tag is not None:
+        ET.SubElement(input_tag, "additional-files", {"value": "environment.add.xml"})
+    else:
+        print("Error: Could not find <input> tag.")
 
-
-tree = ET.parse(file_sumocfg)
-root = tree.getroot()
+# 2. Update the output folders
 summary = root.find(".//summary-output")
 tripinfo = root.find(".//tripinfo-output")
 edgedata = root.find(".//edgedata-output")
 log = root.find(".//log")
 
 if summary is not None:
-    value = summary.get("value")
-    new_value = f"{timestamp}/{value}"
-    summary.set("value", new_value)
+    summary.set("value", f"{timestamp}/{summary.get('value')}")
 if tripinfo is not None:
-    value = tripinfo.get("value")
-    new_value = f"{timestamp}/{value}"
-    tripinfo.set("value", new_value)
+    tripinfo.set("value", f"{timestamp}/{tripinfo.get('value')}")
 if edgedata is not None:
-    value = edgedata.get("value")
-    new_value = f"{timestamp}/{value}"
-    edgedata.set("value", new_value)
+    edgedata.set("value", f"{timestamp}/{edgedata.get('value')}")
 if log is not None:
-    value = log.get("value")
-    new_value = f"{timestamp}/{value}"
-    log.set("value", new_value)
+    log.set("value", f"{timestamp}/{log.get('value')}")
 
+# 3. Write it ONCE
 tree.write(file_new_cfg, encoding="UTF-8", xml_declaration=True)
-
+print("Successfully generated config file.")
 
 sumo_cmd = [
     "sumo",
